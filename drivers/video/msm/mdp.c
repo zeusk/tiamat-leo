@@ -185,6 +185,7 @@ static irqreturn_t mdp_isr(int irq, void *data)
     }
 #endif
 
+	status &= ~0x10000; // Cotulla
 	status &= mdp_irq_mask;
 #ifdef CONFIG_MSM_MDP40
 	if (mdp->mdp_dev.overrides & MSM_MDP4_MDDI_DMA_SWITCH) {

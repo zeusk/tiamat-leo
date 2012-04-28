@@ -20,12 +20,14 @@
 #include <linux/device.h>
 #include <linux/wait.h>
 #include <linux/wakelock.h>
+#include <linux/delay.h>
 
 #include <linux/tty.h>
 #include <linux/tty_driver.h>
 #include <linux/tty_flip.h>
 
 #include <mach/msm_smd.h>
+#include "board-htcleo.h"
 
 #define MAX_SMD_TTYS 32
 
@@ -42,6 +44,7 @@ static struct smd_tty_info smd_tty[MAX_SMD_TTYS];
 
 static const struct smd_tty_channel_desc smd_default_tty_channels[] = {
 	{ .id = 0, .name = "SMD_DS" },
+	{ .id = 1, .name = "SMD_DATA1" },
 	{ .id = 27, .name = "SMD_GPSNMEA" },
 };
 
@@ -151,7 +154,36 @@ static void smd_tty_close(struct tty_struct *tty, struct file *f)
 static int smd_tty_write(struct tty_struct *tty, const unsigned char *buf, int len)
 {
 	struct smd_tty_info *info = tty->driver_data;
-	int avail;
+	int avail, ret, runfix=0;
+	static int init=0;
+	const unsigned char* firstcall ="AT@BRIC=0\r";
+	const unsigned char* secondcall="AT+CFUN=0\r";
+	const unsigned char* thirdcall ="AT+COPS=2\r";
+	unsigned int call_len;
+
+	if (len > 7 && !init && htcleo_is_nand_boot()) {
+		pr_info("NAND boot, writing additional init commands to /dev/smd0");
+
+		call_len = strlen(firstcall);
+		avail = smd_write_avail(info->ch);
+		if (call_len > avail)
+			call_len = avail;
+		ret = smd_write(info->ch, firstcall, call_len);
+
+		call_len = strlen(secondcall);
+		avail = smd_write_avail(info->ch);
+		if (call_len > avail)
+			call_len = avail;
+		ret = smd_write(info->ch, secondcall, call_len);
+
+		call_len = strlen(thirdcall);
+		avail = smd_write_avail(info->ch);
+		if (call_len > avail)
+			call_len = avail;
+		ret = smd_write(info->ch, thirdcall, call_len);
+
+		init = 1;
+	}
 
 	/* if we're writing to a packet channel we will
 	** never be able to write more data than there
@@ -211,7 +243,7 @@ static int __init smd_tty_init(void)
 	smd_tty_driver->init_termios = tty_std_termios;
 	smd_tty_driver->init_termios.c_iflag = 0;
 	smd_tty_driver->init_termios.c_oflag = 0;
-	smd_tty_driver->init_termios.c_cflag = B38400 | CS8 | CREAD;
+	smd_tty_driver->init_termios.c_cflag = B115200 | CS8 | CREAD;
 	smd_tty_driver->init_termios.c_lflag = 0;
 	smd_tty_driver->flags = TTY_DRIVER_RESET_TERMIOS |
 		TTY_DRIVER_REAL_RAW | TTY_DRIVER_DYNAMIC_DEV;

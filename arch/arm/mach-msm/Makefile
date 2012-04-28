@@ -4,6 +4,7 @@ obj-y += memory.o
 ifndef CONFIG_ARCH_MSM8X60
 obj-y += dma.o
 endif
+obj-y += dex_comm.o
 obj-y += nand_partitions.o
 obj-y += pmic.o
 obj-y += drv_callback.o
@@ -21,13 +22,14 @@ obj-y += irq.o
 endif
 
 obj-$(CONFIG_ARCH_MSM8X60) += clock-dummy.o iommu.o iommu_dev.o devices-msm8x60-iommu.o
-obj-$(CONFIG_MSM_PROC_COMM) += proc_comm.o clock-pcom.o vreg.o
-obj-$(CONFIG_MSM_PROC_COMM) += clock.o
+obj-$(CONFIG_MSM_PROC_COMM) += proc_comm.o vreg.o
 obj-$(CONFIG_MSM_PROC_COMM) += footswitch-pcom.o
 obj-$(CONFIG_ARCH_QSD8X50) += sirc.o
 obj-$(CONFIG_MSM_FIQ_SUPPORT) += fiq_glue.o
 obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o smem_log.o
 obj-$(CONFIG_MSM_SMD) += smd_tty.o smd_qmi.o
+obj-$(CONFIG_MSM_SMD) +=  smd_qmi_wince.o
+obj-$(CONFIG_MSM_PROC_COMM) += clock-wince.o 
 obj-$(CONFIG_MSM_SMD) += last_radio_log.o
 obj-$(CONFIG_MSM_SCM) += scm.o scm-boot.o
 
@@ -43,7 +45,7 @@ obj-$(CONFIG_MSM_RPCSERVERS) += rpc_server_dog_keepalive.o
 obj-$(CONFIG_MSM_RPCSERVERS) += rpc_server_time_remote.o
 obj-$(CONFIG_MSM_ADSP) += qdsp5/
 obj-$(CONFIG_MSM_QDSP5V2) += qdsp5v2/
-obj-$(CONFIG_MSM_QDSP6) += qdsp6/
+obj-$(CONFIG_MSM_QDSP6) += qdsp6_1550/
 obj-$(CONFIG_MSM_HW3D) += hw3d.o
 obj-$(CONFIG_PM) += pm.o
 obj-$(CONFIG_CPU_FREQ) += cpufreq.o
@@ -140,6 +142,19 @@ obj-$(CONFIG_MACH_BRAVOC) += board-bravo-microp.o
 obj-$(CONFIG_MACH_BRAVOC) += board-bravo-tpa2018d1.o
 obj-$(CONFIG_MACH_BRAVOC) += board-bravo-smb329.o
 
+obj-$(CONFIG_MACH_HTCLEO) += board-htcleo.o board-htcleo-panel.o board-htcleo-keypad.o
+obj-$(CONFIG_MACH_HTCLEO) += board-htcleo-ts.o board-htcleo-mmc.o ieee754-df.o
+
+obj-$(CONFIG_MACH_HTCLEO) += board-htcleo-audio.o 
+obj-$(CONFIG_MACH_HTCLEO) += board-htcleo-rfkill.o board-htcleo-wifi.o board-htcleo-wifi-nvs.o board-htcleo-acoustic.o
+obj-$(CONFIG_MACH_HTCLEO) += board-htcleo-microp.o board-htcleo-proximity.o board-htcleo-ls.o  board-htcleo-gsensor.o
+obj-$(CONFIG_HTCLEO_BACKLIGHT) += board-htcleo-bl.o
+obj-$(CONFIG_HTCLEO_BACKLIGHT_LED) += board-htcleo-bl-led.o
+obj-$(CONFIG_HTCLEO_BTN_BACKLIGHT_MANAGER) += board-htcleo-btn_backlight-manager.o
+
+obj-$(CONFIG_HTC_HEADSET_MGR) += htc_headset_mgr.o
+obj-$(CONFIG_HTC_HEADSET_GPIO) += htc_headset_gpio.o
+
 obj-$(CONFIG_HTC_BATTCHG) += htc_battery.o
 obj-$(CONFIG_HTC_PWRSINK) += htc_pwrsink.o
 obj-$(CONFIG_HTC_PWRSPLY) += htc_power_supply.o
@@ -158,3 +173,4 @@ obj-$(CONFIG_MACH_MAHIMAHI) += board-mahimahi-smb329.o
 
 obj-$(CONFIG_ARCH_MSM_FLASHLIGHT) += msm_flashlight.o
 
+obj-$(CONFIG_HTC_FB_CONSOLE) += htc_fb_console.o
