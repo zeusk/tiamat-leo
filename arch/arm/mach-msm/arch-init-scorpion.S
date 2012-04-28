@@ -46,54 +46,188 @@
 .equ TCSR_SPARE2,      0xA8700060
 
 SET_SA:
-	ldr r0, =TCSR_SPARE2
-	ldr r12, [r0]
 
-	/* pack bits 8,2,0 into 2,1,0 */
-	and r0, r12, #0x001
-	and r1, r12, #0x004
-	and r2, r12, #0x100
-	orr r0, r1, lsr #1
-	orr r0, r2, lsr #6
+        //; no stack at this point and any registers we use will be 0'd
+        //; after we return
+        LDR     r0, =TCSR_SPARE2
+        LDR     r1, [r0]
+        LDR     r0, = 0x010F
+        AND     r2, r1, r0   //; concerned with bits [8, 3:0]
 
-	adr r1, table_l1_acc
-	mov r0, r0, lsl #2
-	ldr r3, [r1, r0]
+        //;--------------------------------------------------------------------
+        //; Fuse bits used to determine sense amp settings
+        //;--------------------------------------------------------------------
 
-	/* write 3800XXXX to PVR0F0 */
-	orr r0, r3, #0x38000000
-	mcr p15, 0, r0, c15, c15, 0
+        LDR     r0, = 0x0105
+        AND     r4, r2, r0    //;  mask off all but L1 ACC2, L1 ACC1 and L1 ACC0
+        //;set to default of FC00
+        ADR     r5, PVR0F0_6bits    //; point to PVR0F0
+        ADR     r3, PVR2F0_6bits    //; point to PVR2F0
 
-	/* write XXXX0000 to PVR2F0 */
-	mov r1, r3, lsl #16
-	mcr p15, 2, r1, c15, c15, 0
+ck_0:
+        //; if L1_[2:0] == 000 then ACC setting = FC00
+        LDR     r1, = 0x0
+        CMP     r4, r1
+        BNE     ck_1
+        B       WRITE_L1_SA_SETTINGS
 
-	adr r1, table_l2_acc
-	and r0, r12, #0x008
-	and r2, r12, #0x002
-	orr r0, r0, r2, lsl #1
-	ldr r2, [r1, r0]
+ck_1:
+        //; if L1_[2:0] == 001 then ACC setting = FC00
+        LDR     r1, = 0x01
+        CMP     r4, r1
+        BNE     ck_2
+        B       WRITE_L1_SA_SETTINGS
 
-	/* write to L2VR3F1 */
-	mcr p15, 3, r2, c15, c15, 1
+ck_2:
+        //; if L1_[2:0] == 010 then ACC setting = 7C00
+        LDR     r1, = 0x04
+        CMP     r4, r1
+        BNE     ck_3
+        ADR     r5, PVR0F0_5bits    //; point to PVR0F0
+        ADR     r3, PVR2F0_5bits    //; point to PVR2F0
+        B       WRITE_L1_SA_SETTINGS
 
-	bx lr
+ck_3:
+        //; if L1_[2:0] == 011 then ACC setting = FC00
+        LDR     r1, = 0x05
+        CMP     r4, r1
+        BNE     ck_4
+        ADR     r5, PVR0F0_6bits    //; point to PVR0F0
+        ADR     r3, PVR2F0_6bits    //; point to PVR2F0
+        B       WRITE_L1_SA_SETTINGS
 
-table_l1_acc:
-	.word 0xFC00
-	.word 0xFC00
-	.word 0x7C00
-	.word 0xFC00
-	.word 0x3C00
-	.word 0x0400
-	.word 0x0C00
-	.word 0x1C00
+ck_4:
+        //; if L1_[2:0] == 0100 then ACC setting = 3C00
+        LDR     r1, = 0x0100
+        CMP     r4, r1
+        BNE     ck_5
+        ADR     r5, PVR0F0_4bits    //; point to PVR0F0
+        ADR     r3, PVR2F0_4bits    //; point to PVR2F0
+        B       WRITE_L1_SA_SETTINGS
 
-table_l2_acc:
-	.word 0x010102
-	.word 0x010102
-	.word 0x010101
-	.word 0x212102
+ck_5:
+        //; if L1_[2:0] == 0101 then ACC setting = 0400
+        LDR     r1, = 0x0101
+        CMP     r4, r1
+        BNE     ck_6
+        ADR     r5, PVR0F0_1bits    //; point to PVR0F0
+        ADR     r3, PVR2F0_1bits    //; point to PVR2F0
+        B       WRITE_L1_SA_SETTINGS
+
+ck_6:
+        //; if L1_[2:0] == 0110 then ACC setting = 0C00
+        LDR     r1, = 0x0104
+        CMP     r4, r1
+        BNE     ck_7
+        ADR     r5, PVR0F0_2bits    //; point to PVR0F0
+        ADR     r3, PVR2F0_2bits    //; point to PVR2F0
+        B       WRITE_L1_SA_SETTINGS
+
+ck_7:
+        //; if L1_[2:0] == 0111 then ACC setting = 1C00
+        LDR     r1, = 0x0105
+        CMP     r4, r1
+        ADREQ   r5, PVR0F0_3bits    //; point to PVR0F0
+        ADREQ   r3, PVR2F0_3bits    //; point to PVR2F0
+
+WRITE_L1_SA_SETTINGS:
+
+        LDR     r5, [r5]
+        LDR     r3, [r3]
+
+        //;WCP15_PVR0F0   r5
+        MCR     p15,0x0,r5,c15,c15,0   //; write R5 to PVR0F0
+
+        //;WCP15_PVR2F0   r3
+        MCR     p15,0x2,r3,c15,c15,0   //; write R3 to PVR2F0
+
+        AND     r4, r2, #0x000A    //;  mask off all but L2 array SA settings
+        ADR     r5, HVT_010102    //; point to L2VR3F1 setting
+                       //;it gets ovewritten if its one of the other two cases
+        //; if L2_1 and L2_0 == 0     ACC setting = 010102
+        LDR     r1, = 0x0000
+        CMP     r4, r1
+        BEQ     WRITE_L2_SA_SETTINGS
+
+        //; if L2_1 = 0 & L2_0 = 1    ACC setting = 010102
+        LDR     R1, = 0x0002
+        CMP     r4, r1
+        BEQ     WRITE_L2_SA_SETTINGS
+
+        //; if L2_1 = 1 & L2_0 = 0    ACC setting = 010101
+        ADR     r5, HVT_010101
+        LDR     R1, = 0x0008
+        CMP     r4, r1
+        BEQ     WRITE_L2_SA_SETTINGS
+
+        //; else L2_1 = 1 & L2_0 = 1  ACC setting = 212102
+        ADR     r5, HVT_212102
+
+
+WRITE_L2_SA_SETTINGS:
+        //;WCP15_L2VR3F1  r4
+        LDR     r5, [r5]
+        MCR     p15,0x3,r5,c15,c15,1     //;write r4 to L2VR3F1
+
+        LDR     r0, =0                   //;make sure the registers we touched
+        LDR     r1, =0                   //;are cleared when we return
+        LDR     r2, =0
+        LDR     r3, =0
+        LDR     r4, =0
+        LDR     r5, =0
+
+        //; routine complete
+        BX      LR
+
+//; L1 SA settings according to LVT speed
+PVR0F0_0bits:
+.word 0x38000000 //; PVR0F0
+PVR2F0_0bits:
+.word 0x00000000 //; PVR2F0  0 bits set
+
+PVR0F0_1bits:
+.word 0x38000400 //; PVR0F0
+PVR2F0_1bits:
+.word 0x04000000 //; PVR2F0  1 bits set
+
+PVR0F0_2bits:
+.word 0x38000C00 //; PVR0F0
+PVR2F0_2bits:
+.word 0x0C000000 //; PVR2F0  2 bits set
+
+PVR0F0_3bits:
+.word 0x38001C00 //; PVR0F0
+PVR2F0_3bits:
+.word 0x1C000000 //; PVR2F0  3 bits set
+
+PVR0F0_4bits:
+.word 0x38003C00 //; PVR0F0
+PVR2F0_4bits:
+.word 0x3C000000 //; PVR2F0  4 bits set
+
+PVR0F0_5bits:
+.word 0x38007C00 //; PVR0F0
+PVR2F0_5bits:
+.word 0x7C000000 //; PVR2F0  5 bits set
+
+PVR0F0_6bits:
+.word 0x3800FC00 //; PVR0F0
+PVR2F0_6bits:
+.word 0xFC000000 //; PVR2F0  6 bits set
+
+//; L2 SA settings according to HVT speed
+HVT_212102:
+.word 0x00212102 //; L2VR3F1
+
+HVT_010102:
+.word 0x00010102 //; L2VR3F1
+
+HVT_010101:
+.word 0x00010101 //; L2VR3F1
+
+
+.ltorg
+
 
 .globl __cpu_early_init
 __cpu_early_init:
@@ -179,6 +313,11 @@ __cpu_early_init:
         //; DCIALL to invalidate entire D-Cache
         MCR    p15, 0, r0, c9, c0, 6    //; DCIALL  r0
 
+	//; Initialize ADFSR to zero
+        MCR    p15, 0, r0, c5, c1, 0    //; ADFSR   r0
+
+	//; Initialize EFSR to zero
+        MCR    p15, 7, r0, c15, c0, 1   //; EFSR    r0
 
         //; The VBAR (Vector Base Address Register) should be initialized
         //; early in your code. We are setting it to zero
@@ -200,10 +339,6 @@ __cpu_early_init:
         //; Setup DCLKCR to allow normal D-Cache line fills
         MCR    p15, 1, r0, c9, c0, 7    //; WCP15_DCLKCR r0
 
-        //; Initialize the ADFSR and EFSR registers.
-        MCR    p15, 0, r0,  c5, c1, 0   //; ADFSR
-        MCR    p15, 7, r0, c15, c0, 1   //; EFSR
-
         //; Setup the TLBLKCR
         //; Victim = 6'b000000; Floor = 6'b000000;
         //; IASIDCFG = 2'b00 (State-Machine); IALLCFG = 2'b01 (Flash); BNA = 1'b0;
@@ -219,11 +354,27 @@ __cpu_early_init:
         //; Make sure UTLB request has been presented to macro before continuing
         ISB
 
+        // Disable predecode repair cache on certain Scorpion revisions
+        // (Raptor V2 and earlier, or Halcyon V1)
+        MRC    p15, 0, r1, c0, c0, 0      //; MIDR
+        BIC    r2, r1, #0xf7              //; check for Raptor2 or below
+        LDR    r3, =0x510f0000
+        CMP    r2, r3
+        BEQ    DPRC
+        BIC    r2, r1, #0xf0              //; check for Halcyon V1
+        LDR    r3, =0x511f0000
+        CMP    r2, r3
+        BNE    SYSI2
+
+DPRC:
+        MRC    p15, 0, r1, c15, c15, 2    //; PVR0F2
+        ORR    r1, r1, #0x10              //; enable bit 4
+        MCR    p15, 0, r1, c15, c15, 2    //; disable predecode repair cache
+
+SYSI2:
         //; setup L2CR1 to some default Instruction and data prefetching values
         //; Users may want specific settings for various performance enhancements
-        //; In Halcyon we do not have broadcasting barriers. So we need to turn
-        //  ; on bit 8 of L2CR1; which DBB:( Disable barrier broadcast )
-        MOV r2, #0x100
+        MOV r2, #0x33
         MCR    p15, 3, r2, c15, c0, 3     //; WCP15_L2CR1  r0
 
 
@@ -232,26 +383,17 @@ __cpu_early_init:
         ORR    r2, r2, #0x00000800
         MCR    p15, 0, r2, c1, c0, 0      //; WCP15_SCTLR  r2
 
-#ifdef CONFIG_ARCH_QSD8X50
-        /* disable predecode repair cache for thumb2 (DPRC, set bit 4 in PVR0F2) */
-        mrc p15, 0, r2, c15, c15, 2
-        orr r2, r2, #0x10
-        mcr p15, 0, r2, c15, c15, 2
-#endif
-
-        mov r1, lr
         //; Make sure Link stack is initialized with branch and links to sequential addresses
         //; This aids in creating a predictable startup environment
-       BL      SEQ1
-SEQ1:  BL      SEQ2
-SEQ2:  BL      SEQ3
-SEQ3:  BL      SEQ4
-SEQ4:  BL      SEQ5
-SEQ5:  BL      SEQ6
-SEQ6:  BL      SEQ7
-SEQ7:  BL      SEQ8
-SEQ8:
-        mov lr, r1
+//;       BL      SEQ1
+//;SEQ1:  BL      SEQ2
+//;SEQ2:  BL      SEQ3
+//;SEQ3:  BL      SEQ4
+//;SEQ4:  BL      SEQ5
+//;SEQ5:  BL      SEQ6
+//;SEQ6:  BL      SEQ7
+//;SEQ7:  BL      SEQ8
+//;SEQ8:
 
         //; REMOVE FOLLOWING THREE INSTRUCTIONS WHEN POWER COLLAPSE IS ENA
         //;Make sure the DBGOSLSR[LOCK] bit is cleared to allow access to the debug registers
@@ -278,22 +420,22 @@ SEQ8:
         //; customize these settings to meet their needs.
         //;----------------------------------------------------------------------
         MOV    r2,  #0x1f
-        MOV    r1,  #0x17                 //;ABT mode
+        MOV    r1,  #0xd7                 //;ABT mode
         msr    cpsr_c, r1                 //;ABT mode
         msr    spsr_cxfs, r2              //;clear the spsr
-        MOV    r1,  #0x1b                 //;UND mode
+        MOV    r1,  #0xdb                 //;UND mode
         msr    cpsr_c, r1                 //;UND mode
         msr    spsr_cxfs, r2              //;clear the spsr
-        MOV    r1,  #0x11                 //;FIQ mode
+        MOV    r1,  #0xd1                 //;FIQ mode
         msr    cpsr_c, r1                 //;FIQ mode
         msr    spsr_cxfs, r2              //;clear the spsr
-        MOV    r1,  #0x12                 //;IRQ mode
+        MOV    r1,  #0xd2                 //;IRQ mode
         msr    cpsr_c, r1                 //;IRQ mode
         msr    spsr_cxfs, r2              //;clear the spsr
-        MOV    r1,  #0x16                 //;Monitor mode
+        MOV    r1,  #0xd6                 //;Monitor mode
         msr    cpsr_c, r1                 //;Monitor mode
         msr    spsr_cxfs, r2              //;clear the spsr
-        MOV    r1,  #0x13                 //;SVC mode
+        MOV    r1,  #0xd3                 //;SVC mode
         msr    cpsr_c, r1                 //;SVC mode
         msr    spsr_cxfs, r2              //;clear the spsr
 
@@ -371,8 +513,8 @@ SEQ8:
                 //;if HW_revision is 1.0 or older, (revision==0)
                 CMP r2,#0
         //; Disable d-cache on older QSD8650 (Rev 1.0) silicon
-        orreq   r3, r3, #0x4000          //;disable dcache
-        MCR   p15, 0, r3, c1, c0, 1      //; WCP15_ACTLR  r3
+        //;orreq   r3, r3, #0x4000          //;disable dcache
+        //;MCR   p15, 0, r3, c1, c0, 1      //; WCP15_ACTLR  r3
 
 //;End of error and control setting
 
