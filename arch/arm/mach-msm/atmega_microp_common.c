@@ -146,6 +146,7 @@ static int i2c_write_block(struct i2c_client *client, uint8_t addr,
 	return 0;
 }
 
+#ifndef CONFIG_MACH_HTCLEO
 int microp_i2c_read(uint8_t addr, uint8_t *data, int length)
 {
 	struct i2c_client *client = private_microp_client;
@@ -181,6 +182,7 @@ int microp_i2c_write(uint8_t addr, uint8_t *data, int length)
 	return 0;
 }
 EXPORT_SYMBOL(microp_i2c_write);
+#endif
 
 void microp_mobeam_enable(int enable)
 {
@@ -235,6 +237,49 @@ int microp_write_interrupt(struct i2c_client *client,
 			__func__, (enable ? "enable" : "disable"), interrupt);
 	return ret;
 }
+
+#ifndef CONFIG_MACH_HTCLEO
+int microp_set_adc_req(uint8_t value)
+{
+	struct i2c_client *client;
+	int ret;
+	uint8_t cmd[1];
+
+	client = private_microp_client;	
+	cmd[0] = value;
+	ret = i2c_write_block(client, MICROP_I2C_WCMD_ADC_REQ, cmd, 1);
+	if (ret < 0) 
+	{
+		dev_err(&client->dev, "%s: request adc fail\n", __func__);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int microp_get_remote_adc(uint32_t *val)
+{
+	struct i2c_client *client;
+	int ret;
+	uint8_t data[4];
+
+	if (!val)
+		return -EIO; 
+
+	client = private_microp_client;	
+	ret = i2c_read_block(client, MICROP_I2C_RCMD_ADC_VALUE, data, 2);
+	if (ret < 0) 
+	{
+		dev_err(&client->dev, "%s: request adc fail\n", __func__);
+		return -EIO;
+	}
+
+//	printk("%x %x\n", data[0], data[1]);
+	*val = data[1] | (data[0] << 8);
+	printk("remote adc %d\n", *val);
+	return 0;
+}
+#endif
 
 int microp_read_adc(uint8_t *data)
 {
@@ -321,6 +366,7 @@ static int microp_spi_enable(struct i2c_client *client, uint8_t enable)
 	return ret;
 }
 
+#ifndef CONFIG_MACH_HTCLEO
 int microp_spi_vote_enable(int spi_device, uint8_t enable)
 {
 	struct i2c_client *client = private_microp_client;
@@ -371,6 +417,7 @@ exit:
 }
 
 EXPORT_SYMBOL(microp_spi_vote_enable);
+#endif
 
 static void microp_reset_microp(struct i2c_client *client)
 {
