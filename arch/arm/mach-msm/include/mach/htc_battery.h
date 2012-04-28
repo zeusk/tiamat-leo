@@ -84,10 +84,12 @@ struct htc_battery_platform_data {
 	int gpio_usb_id;
 	int gpio_mchg_en_n;
 	int gpio_iset;
+	int gpio_power;
 	int guage_driver;
 	int m2a_cable_detect;
 	int charger;
 	struct htc_battery_tps65200_int int_data;
+/*	int force_no_rpc; */
 };
 
 #if CONFIG_HTC_BATTCHG

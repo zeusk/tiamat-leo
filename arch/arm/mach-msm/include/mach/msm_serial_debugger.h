@@ -23,4 +23,12 @@ static inline void msm_serial_debug_init(unsigned int base, int irq,
 		struct device *clk_device, int signal_irq, int wakeup_irq) {}
 #endif
 
+
+/* Optional platform device data for msm_serial_debug_platform_data driver.
+ * Used to configure low power wakeup */
+struct msm_serial_debug_platform_data {
+	void (*config_gpio)(int);
+	bool disable_uart;
+};
+
 #endif

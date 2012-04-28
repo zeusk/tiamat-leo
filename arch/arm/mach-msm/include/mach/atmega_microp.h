@@ -35,18 +35,19 @@
 #define MICROP_FUNCTION_REMOTEKEY	2
 #define MICROP_FUNCTION_LCD_BL		3
 #define MICROP_FUNCTION_RMK_VALUE	4
+#define MICROP_FUNCTION_KEY			5
 #define MICROP_FUNCTION_INTR		11
 #define MICROP_FUNCTION_GSENSOR		12
-#define MICROP_FUNCTION_LED		13
+#define MICROP_FUNCTION_LED			13
 #define MICROP_FUNCTION_HPIN		14
 #define MICROP_FUNCTION_RESET_INT	15
 #define MICROP_FUNCTION_SIM_CARD	16
 #define MICROP_FUNCTION_SDCARD		17
-#define MICROP_FUNCTION_OJ		18
-#define MICROP_FUNCTION_P		19
+#define MICROP_FUNCTION_OJ			18
+#define MICROP_FUNCTION_P			19
 
 #define HEADSET_NO_MIC			0
-#define HEADSET_MIC			1
+#define HEADSET_MIC				1
 #define HEADSET_METRICO			2
 
 #define LED_RGB					(1 << 0)
@@ -80,6 +81,7 @@
 #define MICROP_I2C_WCMD_BL_EN			0x26
 #define MICROP_I2C_RCMD_VERSION			0x30
 #define MICROP_I2C_WCMD_ADC_TABLE		0x42
+#define MICROP_I2C_WCMD_LED_CTRL		0x51
 #define MICROP_I2C_WCMD_LED_MODE		0x53
 #define MICROP_I2C_RCMD_GREEN_LED_REMAIN_TIME	0x54
 #define MICROP_I2C_RCMD_AMBER_LED_REMAIN_TIME	0x55
@@ -91,6 +93,7 @@
 #define MICROP_I2C_WCMD_READ_ADC_VALUE_REQ	0x60
 #define MICROP_I2C_RCMD_ADC_VALUE		0x62
 #define MICROP_I2C_WCMD_REMOTEKEY_TABLE		0x63
+#define MICROP_I2C_WCMD_ADC_REQ			0x64
 #define MICROP_I2C_WCMD_LCM_BURST		0x6A
 #define MICROP_I2C_WCMD_LCM_BURST_EN		0x6B
 #define MICROP_I2C_WCMD_LCM_REGISTER		0x70
@@ -119,6 +122,7 @@
 #define MICROP_I2C_WCMD_SIMCARD_DEBN_TIME	0x8A
 #define MICROP_I2C_WCMD_GPO_LED_STATUS_EN	0x90
 #define MICROP_I2C_WCMD_GPO_LED_STATUS_DIS	0x91
+#define MICROP_I2C_RCMD_GPO_LED_STATUS		0x92
 #define MICROP_I2C_WCMD_OJ_INT_STATUS		0xA8
 #define MICROP_I2C_RCMD_MOBEAM_STATUS		0xB1
 #define MICROP_I2C_WCMD_MOBEAM_DL		0xB2
@@ -259,6 +263,8 @@ void microp_get_als_kvalue(int i);
 int microp_spi_vote_enable(int spi_device, uint8_t enable);
 void microp_register_ops(struct microp_ops *ops);
 
+int microp_set_adc_req(uint8_t value);
+int microp_get_remote_adc(uint32_t *val);
 int microp_read_adc(uint8_t *data);
 void microp_mobeam_enable(int enable);
 

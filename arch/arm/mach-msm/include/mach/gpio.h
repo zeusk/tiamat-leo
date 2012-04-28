@@ -13,6 +13,7 @@
  * GNU General Public License for more details.
  *
  */
+
 #ifndef __ASM_ARCH_MSM_GPIO_H
 #define __ASM_ARCH_MSM_GPIO_H
 
@@ -56,8 +57,10 @@ enum {
 	GPIO_CFG_DISABLE,
 };
 
+/* see /arch/arm/mach-msm/generic_gpio.c for implementation */
 extern void config_gpio_table(uint32_t *table, int len);
 extern int gpio_configure(unsigned int gpio, unsigned long flags);
+int gpio_tlmm_config(unsigned config, unsigned disable);
 
 #define GPIO_CFG(gpio, func, dir, pull, drvstr) \
 	((((gpio) & 0x3FF) << 4)        |	  \

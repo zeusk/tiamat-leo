@@ -51,13 +51,9 @@
 #define USB_HWDEVICE         (MSM_USB_BASE + 0x000C)
 #define USB_HWTXBUF          (MSM_USB_BASE + 0x0010)
 #define USB_HWRXBUF          (MSM_USB_BASE + 0x0014)
-
-#ifdef CONFIG_ARCH_MSM7X00A
-#define USB_SBUSCFG          (MSM_USB_BASE + 0x0090)
-#else
 #define USB_AHBBURST         (MSM_USB_BASE + 0x0090)
 #define USB_AHBMODE          (MSM_USB_BASE + 0x0098)
-#endif
+#define USB_SBUSCFG          (MSM_USB_BASE + 0x0090)
 
 #define USB_CAPLENGTH        (MSM_USB_BASE + 0x0100) /* 8 bit */
 #define USB_HCIVERSION       (MSM_USB_BASE + 0x0102) /* 16 bit */
@@ -221,6 +217,18 @@ struct ept_queue_item {
                                 OTGSC_IDIE)
 #define OTGSC_INTR_STS_MASK    (0x7f << 16)
 #define CURRENT_CONNECT_STATUS (1 << 0)
+
+#define PORTSC_FPR             (1 << 6)  /* R/W - State normal => suspend */
+#define PORTSC_SUSP            (1 << 7)  /* Read - Port in suspend state */
+#define PORTSC_LS              (3 << 10) /* Read - Port's Line status */
+#define PORTSC_PHCD            (1 << 23) /* phy suspend mode */
+#define PORTSC_CCS             (1 << 0)  /* current connect status */
+#define PORTSC_PTS              (3 << 30)
+#define PORTSC_PTS_ULPI         (2 << 30)
+#define PORTSC_PTS_SERIAL       (3 << 30)
+/* suspend and remote wakeup */
+#define PORTSC_FPR             (1 << 6)
+#define PORTSC_SUSP            (1 << 7)
 
 /* test mode support */
 #define J_TEST			(0x0100)

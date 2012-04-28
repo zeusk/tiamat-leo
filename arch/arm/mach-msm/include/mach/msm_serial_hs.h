@@ -36,6 +36,14 @@ struct msm_serial_hs_platform_data {
 	char rx_to_inject;
 
 	void (*exit_lpm_cb)(struct uart_port *);
+
+	unsigned char cpu_lock_supported;
+
+	/* for bcm */
+	unsigned char bt_wakeup_pin_supported;
+	unsigned char bt_wakeup_pin;	/* Device to Chip */
+	unsigned char host_wakeup_pin;	/* Chip to Device */
+
 };
 
 #endif

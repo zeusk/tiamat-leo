@@ -35,6 +35,7 @@
 1001:	ldr	\rd, [\rx, #0x08]
 	tst	\rd, #0x04
 	beq	1001b
+1002:
 	.endm
 #else
 	.macro  addruart, rp, rv

@@ -22,7 +22,6 @@
 #include <linux/list.h>
 #include <linux/platform_device.h>
 
-#if !defined(CONFIG_MSM_LEGACY_7X00A_AMSS)
 /* RPC API version structure
  * Version bit 31 : 1->hashkey versioning,
  *                  0->major-minor (backward compatible) versioning
@@ -38,6 +37,9 @@
 #define RPC_VERSION_MAJOR_OFFSET 16
 #define RPC_VERSION_MINOR_MASK 0x0000ffff
 
+/* callback ID for NULL callback function is -1 */
+#define MSM_RPC_CLIENT_NULL_CB_ID 0xffffffff
+
 #define MSM_RPC_VERS(major, minor)					\
 	((uint32_t)((((major) << RPC_VERSION_MAJOR_OFFSET) &		\
 		RPC_VERSION_MAJOR_MASK) |				\
@@ -45,11 +47,6 @@
 #define MSM_RPC_GET_MAJOR(vers) (((vers) & RPC_VERSION_MAJOR_MASK) >>	\
 					RPC_VERSION_MAJOR_OFFSET)
 #define MSM_RPC_GET_MINOR(vers) ((vers) & RPC_VERSION_MINOR_MASK)
-#else
-#define MSM_RPC_VERS(major, minor) (major)
-#define MSM_RPC_GET_MAJOR(vers) (vers)
-#define MSM_RPC_GET_MINOR(vers) 0
-#endif
 
 struct msm_rpc_endpoint;
 
@@ -162,6 +159,20 @@ int msm_rpc_call_reply(struct msm_rpc_endpoint *ept, uint32_t proc,
 int msm_rpc_call(struct msm_rpc_endpoint *ept, uint32_t proc,
 		 void *request, int request_size,
 		 long timeout);
+
+struct msm_rpc_xdr {
+	void *in_buf;
+	uint32_t in_size;
+	uint32_t in_index;
+	struct mutex in_lock;
+
+	void *out_buf;
+	uint32_t out_size;
+	uint32_t out_index;
+	struct mutex out_lock;
+
+	struct msm_rpc_endpoint *ept;
+};
 
 struct msm_rpc_server
 {

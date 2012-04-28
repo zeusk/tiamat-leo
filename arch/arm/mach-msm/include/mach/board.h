@@ -70,6 +70,20 @@ struct msm_camera_legacy_device_platform_data {
 	struct msm_camsensor_device_platform_data *sensor_info;
 };
 
+struct msm_i2c_platform_data {
+	int clk_freq;
+	uint32_t *rmutex;
+	int rsl_id;
+	uint32_t pm_lat;
+	int pri_clk;
+	int pri_dat;
+	int aux_clk;
+	int aux_dat;
+	const char *clk;
+	const char *pclk;
+	void (*msm_i2c_config_gpio)(int iface, int config_type);
+};
+
 #define MSM_CAMERA_FLASH_NONE 0
 #define MSM_CAMERA_FLASH_LED  1
 #define MSM_CAMERA_FLASH_SRC_PMIC (0x00000001<<0)
@@ -162,17 +176,94 @@ struct msm_snd_endpoints {
 	unsigned num;
 };
 
+enum {
+	BOOTMODE_NORMAL = 	0x0,
+	BOOTMODE_FACTORY = 	0x1,
+	BOOTMODE_RECOVERY = 	0x2,
+	BOOTMODE_CHARGE	= 	0x3,
+	BOOTMODE_POWERTEST = 	0x4,
+	BOOTMODE_OFFMODE_CHARGING = 0x5,
+};
+
+#define MSM_MAX_DEC_CNT 14
+/* 7k target ADSP information */
+/* Bit 23:0, for codec identification like mp3, wav etc *
+ * Bit 27:24, for mode identification like tunnel, non tunnel*
+ * bit 31:28, for operation support like DM, DMA */
+enum msm_adspdec_concurrency {
+	MSM_ADSP_CODEC_WAV = 0,
+	MSM_ADSP_CODEC_ADPCM = 1,
+	MSM_ADSP_CODEC_MP3 = 2,
+	MSM_ADSP_CODEC_REALAUDIO = 3,
+	MSM_ADSP_CODEC_WMA = 4,
+	MSM_ADSP_CODEC_AAC = 5,
+	MSM_ADSP_CODEC_RESERVED = 6,
+	MSM_ADSP_CODEC_MIDI = 7,
+	MSM_ADSP_CODEC_YADPCM = 8,
+	MSM_ADSP_CODEC_QCELP = 9,
+	MSM_ADSP_CODEC_AMRNB = 10,
+	MSM_ADSP_CODEC_AMRWB = 11,
+	MSM_ADSP_CODEC_EVRC = 12,
+	MSM_ADSP_CODEC_WMAPRO = 13,
+	MSM_ADSP_MODE_TUNNEL = 24,
+	MSM_ADSP_MODE_NONTUNNEL = 25,
+	MSM_ADSP_MODE_LP = 26,
+	MSM_ADSP_OP_DMA = 28,
+	MSM_ADSP_OP_DM = 29,
+};
+
+struct msm_adspdec_info {
+	const char *module_name;
+	unsigned module_queueid;
+	int module_decid; /* objid */
+	unsigned nr_codec_support;
+};
+
+/* Carries information about number codec
+ * supported if same codec or different codecs
+ */
+struct dec_instance_table {
+	uint8_t max_instances_same_dec;
+	uint8_t max_instances_diff_dec;
+};
+
+struct msm_adspdec_database {
+	unsigned num_dec;
+	unsigned num_concurrency_support;
+	unsigned int *dec_concurrency_table; /* Bit masked entry to *
+					      *	represents codec, mode etc */
+	struct msm_adspdec_info  *dec_info_list;
+	struct dec_instance_table *dec_instance_list;
+};
 extern struct sys_timer msm_timer;
 
 /* common init routines for use by arch/arm/mach-msm/board-*.c */
 void __init msm_add_devices(void);
 void __init msm_map_common_io(void);
 void __init msm_init_irq(void);
-void __init msm_clock_init(struct clk *clock_tbl, unsigned num_clocks);
+void __init msm_clock_init(void);
 void __init msm_acpu_clock_init(struct msm_acpu_clock_platform_data *);
 int __init msm_add_sdcc(unsigned int controller,
 			struct msm_mmc_platform_data *plat,
 			unsigned int stat_irq, unsigned long stat_irq_flags);
+
+#if defined(CONFIG_MSM_RMT_STORAGE_SERVER)
+struct shared_ramfs_entry {
+	uint32_t client_id;   	/* Client id to uniquely identify a client */
+	uint32_t base_addr;	/* Base address of shared RAMFS memory */
+	uint32_t size;		/* Size of the shared RAMFS memory */
+	uint32_t server_status;	/* This will be initialized to 1 when
+				   remote storage RPC server is available */
+};
+struct shared_ramfs_table {
+	uint32_t magic_id;  	/* Identify RAMFS details in SMEM */
+	uint32_t version;	/* Version of shared_ramfs_table */
+	uint32_t entries;	/* Total number of valid entries   */
+	struct shared_ramfs_entry ramfs_entry[3];	/* List all entries */
+};
+
+int __init rmt_storage_add_ramfs(void);
+#endif
 
 #if defined(CONFIG_USB_FUNCTION_MSM_HSUSB) || defined(CONFIG_USB_MSM_72K)
 void msm_hsusb_set_vbus_state(int online);

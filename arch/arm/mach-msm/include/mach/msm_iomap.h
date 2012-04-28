@@ -53,6 +53,4 @@
 #include "msm_iomap-7x00.h"
 #endif
 
-
-
 #endif

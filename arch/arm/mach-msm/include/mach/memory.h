@@ -17,36 +17,48 @@
 #define __ASM_ARCH_MEMORY_H
 
 /* physical offset of RAM */
-#if defined(CONFIG_ARCH_QSD8X50) && defined(CONFIG_MSM_SOC_REV_A)
-#define PHYS_OFFSET		UL(0x00000000)
+#if defined(CONFIG_MACH_HTCLEO)
+#define PHYS_OFFSET			UL(0x11800000)
+#define RESET_VECTOR		UL(0x00000000)
+#elif defined(CONFIG_ARCH_QSD8X50) && defined(CONFIG_MSM_SOC_REV_A)
+#define PHYS_OFFSET			UL(0x00000000)
 #elif defined(CONFIG_ARCH_QSD8X50)
-#define PHYS_OFFSET		UL(0x20000000)
+#define PHYS_OFFSET			UL(0x20000000)
 #define RESET_VECTOR		UL(0x00000000)
 #elif defined(CONFIG_ARCH_MSM7X30)
-#define PHYS_OFFSET		UL(0x00200000)
+#define PHYS_OFFSET			UL(0x00200000)
 #define RESET_VECTOR		UL(0x00000000)
 #elif defined(CONFIG_ARCH_MSM8X60)
-#define PHYS_OFFSET		UL(0x40200000)
+#define PHYS_OFFSET			UL(0x40200000)
+#define RESET_VECTOR		UL(0x00000000)
+#elif defined(CONFIG_MACH_SAPPHIRE)
+#define PHYS_OFFSET			UL(0x02000000)
 #define RESET_VECTOR		UL(0x00000000)
 #else
-#ifdef CONFIG_MACH_SAPPHIRE
-#define PHYS_OFFSET		UL(0x02000000)
+#define PHYS_OFFSET			UL(0x10000000)
 #define RESET_VECTOR		UL(0x00000000)
-#else
-#define PHYS_OFFSET		UL(0x10000000)
-#define RESET_VECTOR		UL(0x00000000)
-#endif
 #endif
 
 #define HAS_ARCH_IO_REMAP_PFN_RANGE
 
+#define CONSISTENT_DMA_SIZE (4*SZ_1M)
+
 #ifndef __ASSEMBLY__
+void *alloc_bootmem_aligned(unsigned long size, unsigned long alignment);
 void clean_and_invalidate_caches(unsigned long, unsigned long, unsigned long);
 void clean_caches(unsigned long, unsigned long, unsigned long);
 void invalidate_caches(unsigned long, unsigned long, unsigned long);
+#define arch_barrier_extra() do {} while (0)
 #endif
 
-#define CONSISTENT_DMA_SIZE (4*SZ_1M)
+#ifdef CONFIG_CACHE_L2X0
+extern void l2x0_cache_sync(void);
+extern void l2x0_cache_flush_all(void);
+#define finish_arch_switch(prev)     do { l2x0_cache_sync(); } while (0)
+#endif
+
+#endif
+#endif
 
 #ifdef CONFIG_ARCH_MSM_SCORPION
 #define arch_has_speculative_dfetch()  1
