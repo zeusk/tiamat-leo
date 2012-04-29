@@ -685,17 +685,18 @@ static void __init msm_timer_init(void)
 {
 	int i;
 	int res;
-
-#ifdef CONFIG_ARCH_MSM8X60
-	writel(DGT_CLK_CTL_DIV_4, MSM_TMR_BASE + DGT_CLK_CTL);
-#endif
+	
+	printk("$$$ msm_timer_init $$$\n");
+	printk(" 1DIV = %08X\n", readl(MSM_GPT_BASE + 0x20));
+	writel(3, MSM_GPT_BASE + 0x20);
+	printk(" 2DIV = %08X\n", readl(MSM_GPT_BASE + 0x20));
 
 	for (i = 0; i < ARRAY_SIZE(msm_clocks); i++) {
 		struct msm_clock *clock = &msm_clocks[i];
 		struct clock_event_device *ce = &clock->clockevent;
 		struct clocksource *cs = &clock->clocksource;
 		writel(0, clock->regbase + TIMER_ENABLE);
-		writel(0, clock->regbase + TIMER_CLEAR);
+		writel(1, clock->regbase + TIMER_CLEAR);
 		writel(~0, clock->regbase + TIMER_MATCH_VAL);
 		while (msm_read_timer_count(clock)) ; /* wait for clock to clear */
 
