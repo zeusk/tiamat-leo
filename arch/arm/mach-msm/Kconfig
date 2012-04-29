@@ -27,7 +27,6 @@ config ARCH_MSM7X30
 
 config ARCH_QSD8X50
 	bool "QSD8X50"
-	select MACH_QSD8X50_SURF if !MACH_QSD8X50A_ST1_5
 	select ARCH_MSM_SCORPION
 	select MSM_SMD
 	select CPU_V7
@@ -35,7 +34,6 @@ config ARCH_QSD8X50
 	select MSM_PROC_COMM
 	select HAS_MSM_DEBUG_UART_PHYS
 	select VERIFY_PERMISSION_FAULT
-	select MSM_DAL
 	select REGULATOR
 
 config ARCH_MSM8X60
