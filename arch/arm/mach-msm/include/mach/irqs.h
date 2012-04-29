@@ -85,30 +85,6 @@
 #define INT_AD6M_IDLE        (32 + 30)
 #define INT_SIRC_1           (32 + 31)
 
-#define INT_UART1                     (64 + 0)
-#define INT_UART2                     (64 + 1)
-#define INT_UART3                     (64 + 2)
-#define INT_UART1_RX                  (64 + 3)
-#define INT_UART2_RX                  (64 + 4)
-#define INT_UART3_RX                  (64 + 5)
-#define INT_SPI_INPUT                 (64 + 6)
-#define INT_SPI_OUTPUT                (64 + 7)
-#define INT_SPI_ERROR                 (64 + 8)
-#define INT_GPIO_GROUP1               (64 + 9)
-#define INT_GPIO_GROUP2               (64 + 10)
-#define INT_GPIO_GROUP1_SECURE        (64 + 11)
-#define INT_GPIO_GROUP2_SECURE        (64 + 12)
-#define INT_AVS_SVIC                  (64 + 13)
-#define INT_AVS_REQ_UP                (64 + 14)
-#define INT_AVS_REQ_DOWN              (64 + 15)
-#define INT_PBUS_ERR                  (64 + 16)
-#define INT_AXI_ERR                   (64 + 17)
-#define INT_SMI_ERR                   (64 + 18)
-#define INT_EBI1_ERR                  (64 + 19)
-#define INT_IMEM_ERR                  (64 + 20)
-#define INT_SC_TEMP_SENSOR            (64 + 21)
-#define INT_TV_ENC                    (64 + 22)
-
 #define NR_MSM_IRQS 64
 #define NR_SIRC_IRQS 23
 #define NR_GPIO_IRQS 165
