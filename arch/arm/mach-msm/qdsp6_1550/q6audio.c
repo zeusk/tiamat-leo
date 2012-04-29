@@ -25,6 +25,7 @@
 #include <linux/wakelock.h>
 #include <linux/firmware.h>
 #include <linux/miscdevice.h>
+#include <linux/slab.h>
 
 #include "dal.h"
 #include "dal_audio.h"

@@ -42,6 +42,7 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/sched.h>
+#include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/android_pmem.h>
@@ -603,10 +604,10 @@ static int q6venc_ioctl(struct inode *inode, struct file *file,
 }
 
 static const struct file_operations q6venc_dev_fops = {
-	.owner		= THIS_MODULE,
-	.open		= q6venc_open,
-	.release	= q6venc_release,
-	.ioctl		= q6venc_ioctl,
+	.owner			= THIS_MODULE,
+	.open			= q6venc_open,
+	.release		= q6venc_release,
+	.unlocked_ioctl		= q6venc_ioctl,
 };
 
 static struct miscdevice q6venc_misc = {
