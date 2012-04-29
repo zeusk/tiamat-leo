@@ -18,6 +18,7 @@
 #include <linux/delay.h>
 #include <linux/errno.h>
 #include <linux/io.h>
+#include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/gpio.h>
 #include <linux/irq.h>
