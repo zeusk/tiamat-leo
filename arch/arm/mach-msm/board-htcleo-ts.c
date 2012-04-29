@@ -25,6 +25,7 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <linux/slab.h>
 #include <asm/gpio.h>
 #include "board-htcleo.h"
 #include "board-htcleo-ts.h"
