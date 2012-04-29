@@ -140,12 +140,12 @@ config MSM_AMSS_VERSION
 	default 6220 if MSM_AMSS_VERSION_6220
 	default 6225 if MSM_AMSS_VERSION_6225
 	default 6350 if MSM_AMSS_VERSION_6350
-        default 3200 if MSM_AMSS_VERSION_3200
+	default 3200 if MSM_AMSS_VERSION_3200
+	default 1550 if MSM_AMSS_VERSION_1550
 
 choice
 	prompt "AMSS modem firmware version"
 
-	depends on ARCH_MSM7X00A
 	default MSM_AMSS_VERSION_6225
 
 	config MSM_AMSS_VERSION_6210
@@ -163,8 +163,11 @@ choice
 	config MSM_AMSS_VERSION_6350
 		bool "6.3.50"
          
-         config MSM_AMSS_VERSION_3200
- 	        bool "3.2.00"
+	config MSM_AMSS_VERSION_3200
+	        bool "3.2.00"
+
+	config MSM_AMSS_VERSION_1550
+		bool "1.5.50"
 endchoice
 
 menu "Qualcomm MSM Board Type"
