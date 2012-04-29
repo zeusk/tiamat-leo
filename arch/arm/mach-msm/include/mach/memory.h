@@ -48,8 +48,13 @@ void *alloc_bootmem_aligned(unsigned long size, unsigned long alignment);
 void clean_and_invalidate_caches(unsigned long, unsigned long, unsigned long);
 void clean_caches(unsigned long, unsigned long, unsigned long);
 void invalidate_caches(unsigned long, unsigned long, unsigned long);
+
+#ifdef CONFIG_ARCH_MSM_ARM11
+void write_to_strongly_ordered_memory(void);
+
+#include <asm/mach-types.h>
+
 #define arch_barrier_extra() do {} while (0)
-#endif
 
 #ifdef CONFIG_CACHE_L2X0
 extern void l2x0_cache_sync(void);
