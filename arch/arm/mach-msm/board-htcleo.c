@@ -30,12 +30,13 @@
 #include <linux/regulator/machine.h>
 #include <linux/leds.h>
 #include <linux/spi/spi.h>
-#ifdef CONFIG_SENSORS_BMA150_SPI
 #include <linux/bma150.h>
-#endif
 #include <linux/akm8973.h>
 #include <../../../drivers/staging/android/timed_gpio.h>
 #include <linux/ds2746_battery.h>
+#include <linux/msm_kgsl.h>
+#include <linux/regulator/machine.h>
+#include "footswitch.h"
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -492,11 +493,6 @@ static struct msm_camera_device_platform_data msm_camera_device_data =
 	.ioext.appsz  = MSM_CLK_CTL_SIZE,
 };
 
-static int flashlight_control(int mode)
-{
-	return aat1271_flashlight_control(mode);
-}
-
 static struct camera_flash_cfg msm_camera_sensor_flash_cfg = {
 	.camera_flash		= flashlight_control,
 	.num_flash_levels	= FLASHLIGHT_NUM,
@@ -745,50 +741,63 @@ static struct platform_device qsd_device_spi = {
 // KGSL (HW3D support)#include <linux/android_pmem.h>
 ///////////////////////////////////////////////////////////////////////
 
-static struct resource msm_kgsl_resources[] =
-{
+/* start kgsl */
+static struct resource kgsl_3d0_resources[] = {
 	{
-		.name	= "kgsl_reg_memory",
-		.start	= MSM_GPU_REG_PHYS,
-		.end	= MSM_GPU_REG_PHYS + MSM_GPU_REG_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
+		.name  = KGSL_3D0_REG_MEMORY,
+		.start = 0xA0000000,
+		.end = 0xA001ffff,
+		.flags = IORESOURCE_MEM,
 	},
 	{
-		.name	= "kgsl_phys_memory",
-		.start	= MSM_GPU_PHYS_BASE,
-		.end	= MSM_GPU_PHYS_BASE + MSM_GPU_PHYS_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.start	= INT_GRAPHICS,
-		.end	= INT_GRAPHICS,
-		.flags	= IORESOURCE_IRQ,
+		.name = KGSL_3D0_IRQ,
+		.start = INT_GRAPHICS,
+		.end = INT_GRAPHICS,
+		.flags = IORESOURCE_IRQ,
 	},
 };
 
-static int htcleo_kgsl_power_rail_mode(int follow_clk)
-{
-	int mode = follow_clk ? 0 : 1;
-	int rail_id = 0;
-	return msm_proc_comm(PCOM_CLK_REGIME_SEC_RAIL_CONTROL, &rail_id, &mode);
-}
-
-static int htcleo_kgsl_power(bool on)
-{
-	int cmd;
-	int rail_id = 0;
-
-    	cmd = on ? PCOM_CLK_REGIME_SEC_RAIL_ENABLE : PCOM_CLK_REGIME_SEC_RAIL_DISABLE;
-    	return msm_proc_comm(cmd, &rail_id, 0);
-}
-
-static struct platform_device msm_kgsl_device =
-{
-	.name		= "kgsl",
-	.id		= -1,
-	.resource	= msm_kgsl_resources,
-	.num_resources	= ARRAY_SIZE(msm_kgsl_resources),
+static struct kgsl_device_platform_data kgsl_3d0_pdata = {
+	.pwr_data = {
+		.pwrlevel = {
+			{
+				.gpu_freq = 0,
+				.bus_freq = 128000000,
+			},
+		},
+		.init_level = 0,
+		.num_levels = 1,
+		.set_grp_async = NULL,
+		.idle_timeout = HZ/5,
+	},
+	.clk = {
+		.name = {
+			.clk = "grp_clk",
+		},
+	},
+	.imem_clk_name = {
+		.clk = "imem_clk",
+	},
 };
+
+struct platform_device msm_kgsl_3d0 = {
+	.name = "kgsl-3d0",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(kgsl_3d0_resources),
+	.resource = kgsl_3d0_resources,
+	.dev = {
+		.platform_data = &kgsl_3d0_pdata,
+	},
+};
+/* end kgsl */
+
+/* start footswitch regulator */
+struct platform_device *msm_footswitch_devices[] = {
+	FS_PCOM(FS_GFX3D,  "fs_gfx3d"),
+};
+
+unsigned msm_num_footswitch_devices = ARRAY_SIZE(msm_footswitch_devices);
+/* end footswitch regulator */
 
 ///////////////////////////////////////////////////////////////////////
 // Memory
@@ -796,13 +805,15 @@ static struct platform_device msm_kgsl_device =
 
 static struct android_pmem_platform_data mdp_pmem_pdata = {
 	.name		= "pmem",
-	.no_allocator	= 0,
+/*	.no_allocator	= 0,*/
+	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
 	.cached		= 1,
 };
 
 static struct android_pmem_platform_data android_pmem_adsp_pdata = {
 	.name		= "pmem_adsp",
-	.no_allocator	= 0,
+/*	.no_allocator	= 0,*/
+	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
 	.cached		= 1,
 };
 
@@ -811,7 +822,8 @@ static struct android_pmem_platform_data android_pmem_venc_pdata = {
 	.name		= "pmem_venc",
 	.start		= MSM_PMEM_VENC_BASE,
 	.size		= MSM_PMEM_VENC_SIZE,
-	.no_allocator	= 0,
+/*	.no_allocator	= 0,*/
+	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
 	.cached		= 1,
 };
 
@@ -870,7 +882,7 @@ static struct htc_battery_platform_data htc_battery_pdev_data = {
 	.guage_driver = GUAGE_DS2746,
 	.charger = LINEAR_CHARGER,
 	.m2a_cable_detect = 0,
-	.force_no_rpc = 1,
+/*	.force_no_rpc = 1,*/
 	.int_data = {
 		.chg_int = HTCLEO_GPIO_BATTERY_OVER_CHG,
 	},
@@ -945,7 +957,7 @@ static struct platform_device *devices[] __initdata =
 	&msm_device_i2c,
 	&ds2746_battery_pdev,
 	&htc_battery_pdev,
-	&msm_kgsl_device,
+	&msm_kgsl_3d0,
 	&msm_camera_sensor_s5k3e2fx,
 	&htcleo_flashlight_device,
 	&qsd_device_spi,
@@ -1088,15 +1100,10 @@ static void __init htcleo_init(void)
 
 	msm_device_i2c_init();
 
-	/* set the gpu power rail to manual mode so clk en/dis will not
-	* turn off gpu power, and hang it on resume */
-
-	htcleo_kgsl_power_rail_mode(0);
-	htcleo_kgsl_power(false);
-	mdelay(100);
-	htcleo_kgsl_power(true);
-
 	platform_add_devices(devices, ARRAY_SIZE(devices));
+
+	platform_add_devices(msm_footswitch_devices,
+			msm_num_footswitch_devices);
 
 	htcleo_init_panel();
 
@@ -1132,7 +1139,7 @@ static void __init htcleo_fixup(struct machine_desc *desc, struct tag *tags,
 {
 	mi->nr_banks = 1;
 	mi->bank[0].start = MSM_EBI1_BANK0_BASE;
-	mi->bank[0].node = PHYS_TO_NID(MSM_EBI1_BANK0_BASE);
+//	mi->bank[0].node = PHYS_TO_NID(MSM_EBI1_BANK0_BASE);
 	mi->bank[0].size = MSM_EBI1_BANK0_SIZE;
 }
 
