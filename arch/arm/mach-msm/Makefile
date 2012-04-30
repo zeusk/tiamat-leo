@@ -27,7 +27,7 @@ obj-$(CONFIG_MSM_PROC_COMM) += footswitch-pcom.o
 obj-$(CONFIG_ARCH_QSD8X50) += sirc.o
 obj-$(CONFIG_MSM_FIQ_SUPPORT) += fiq_glue.o
 obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o smem_log.o
-obj-$(CONFIG_MSM_SMD) += smd_tty.o smd_qmi.o
+obj-$(CONFIG_MSM_SMD) += smd_tty.o
 obj-$(CONFIG_MSM_SMD) +=  smd_qmi_wince.o
 obj-$(CONFIG_MSM_PROC_COMM) += clock-wince.o 
 obj-$(CONFIG_MSM_SMD) += last_radio_log.o
@@ -147,7 +147,7 @@ obj-$(CONFIG_MACH_HTCLEO) += board-htcleo-ts.o board-htcleo-mmc.o ieee754-df.o
 
 obj-$(CONFIG_MACH_HTCLEO) += board-htcleo-audio.o 
 obj-$(CONFIG_MACH_HTCLEO) += board-htcleo-rfkill.o board-htcleo-wifi.o board-htcleo-wifi-nvs.o board-htcleo-acoustic.o
-obj-$(CONFIG_MACH_HTCLEO) += board-htcleo-microp.o board-htcleo-proximity.o board-htcleo-ls.o  board-htcleo-gsensor.o
+obj-$(CONFIG_MACH_HTCLEO) += board-htcleo-microp.o board-htcleo-proximity.o board-htcleo-ls.o
 obj-$(CONFIG_HTCLEO_BACKLIGHT) += board-htcleo-bl.o
 obj-$(CONFIG_HTCLEO_BACKLIGHT_LED) += board-htcleo-bl-led.o
 obj-$(CONFIG_HTCLEO_BTN_BACKLIGHT_MANAGER) += board-htcleo-btn_backlight-manager.o

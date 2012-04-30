@@ -769,6 +769,11 @@ config VIRTUAL_KPANIC_PARTITION
 	  the specified mtd partition label.
 	  *** DO NOT USE IF YOU ARE USING OTA/RECOVERY ***
 
+config QSD_AUDIO_CALLREC
+	bool "Call recording support [avs333]"
+	depends on QSD_AUDIO
+	default n
+
 config VIRTUAL_KPANIC_PSIZE
 	depends on VIRTUAL_KPANIC_PARTITION
 	int "Default kpanic partition size"
