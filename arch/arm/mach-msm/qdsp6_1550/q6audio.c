@@ -57,6 +57,46 @@
 
 #define CB_EVENT_COOKIE		0xC00CE13E 
 
+struct mic_level{
+	int device_id;
+	int level;
+};
+
+// same gain range is used for every mic
+static int min_mic_gain = -5000;
+static int max_mic_gain = 1500;
+/*
+* level range 0 - 1000
+* level -1 -> level is not defined by user so default value(gain) is set through acbd firmware
+*/
+static struct mic_level user_mic_levels[DEVICE_ID_MIC_COUNT] =
+{
+	[0] = 
+		{
+			.device_id = ADSP_AUDIO_DEVICE_ID_HANDSET_MIC,
+			.level = -1
+		},
+	[1] = 
+		{
+			.device_id = ADSP_AUDIO_DEVICE_ID_SPKR_PHONE_MIC,
+			.level = -1
+		},
+	[2] = 
+		{
+			.device_id = ADSP_AUDIO_DEVICE_ID_HEADSET_MIC,
+			.level = -1
+		},
+	[3] = 
+		{
+			.device_id = ADSP_AUDIO_DEVICE_ID_TTY_HEADSET_MIC,
+			.level = -1
+		},
+	[4] = 
+		{
+			.device_id = ADSP_AUDIO_DEVICE_ID_BT_SCO_MIC,
+			.level = -1
+		}
+};
 
 #if 1
 
@@ -133,7 +173,7 @@ static struct audio_client * audio_test(void);
 static void callback(void *data, int len, void *cookie);
 static int audio_init(struct audio_client *ac);
 static int audio_info(struct audio_client *ac);
-static int q6audio_init_rx_volumes();
+static int q6audio_init_rx_volumes(void);
 
 static struct wake_lock wakelock;
 static struct wake_lock idlelock;
@@ -537,8 +577,12 @@ static int audio_out_open(struct audio_client *ac, uint32_t bufsz,
 //    return r;
     return ac->open_status;
 }
+static void update_all_audio_tx_volume(struct audio_client *ac);
 
 static int audio_in_open(struct audio_client *ac, uint32_t bufsz,
+#ifdef CONFIG_QSD_AUDIO_CALLREC
+			uint32_t flags,
+#endif
              uint32_t rate, uint32_t channels)
 {
     int r;
@@ -553,7 +597,14 @@ static int audio_in_open(struct audio_client *ac, uint32_t bufsz,
 
     rpc.numdev = 1;
     rpc.dev[0] = ADSP_AUDIO_DEVICE_ID_DEFAULT;
+#ifdef CONFIG_QSD_AUDIO_CALLREC
+	if (flags == AUDIO_FLAG_READ)
+		rpc.stream_context = ADSP_AUDIO_DEVICE_CONTEXT_RECORD;
+	else
+		rpc.stream_context = ADSP_AUDIO_DEVICE_CONTEXT_MIXED_RECORD;
+#else
     rpc.stream_context = ADSP_AUDIO_DEVICE_CONTEXT_RECORD;
+#endif
     rpc.buf_max_size = bufsz;
 
     rpc.format = ADSP_AUDIO_FORMAT_PCM;
@@ -774,13 +825,13 @@ static int audio_qcelp_open(struct audio_client *ac, uint32_t bufsz,
     struct msm_audio_qcelp_config *qf = data;
     struct adsp_open_command rpc;
     struct adsp_audio_standard_format *fmt;
-    union adsp_audio_format *ptr;
+//    union adsp_audio_format *ptr;
 
 
     mutex_lock(&open_mem_lock);
     memset(&rpc, 0, sizeof(rpc));
     fmt = (struct adsp_audio_standard_format *)params_data;
-    memset(ptr, 0, sizeof(struct adsp_audio_standard_format));
+    memset(fmt, 0, sizeof(struct adsp_audio_standard_format));
 
     rpc.numdev = 1;
     rpc.dev[0] = ADSP_AUDIO_DEVICE_ID_DEFAULT;
@@ -857,6 +908,7 @@ int q6audio_read(struct audio_client *ac, struct audio_buffer *ab)
     r = dal_call_f5(ac->client, AUDIO_OP_READ, &rpc, sizeof(rpc));
     return 0;
 }
+EXPORT_SYMBOL_GPL(q6audio_read);
 
 int q6audio_write(struct audio_client *ac, struct audio_buffer *ab)
 {
@@ -879,6 +931,7 @@ int q6audio_write(struct audio_client *ac, struct audio_buffer *ab)
     r = dal_call_f5(ac->client, AUDIO_OP_WRITE, &rpc, sizeof(rpc));
     return 0;
 }
+EXPORT_SYMBOL_GPL(q6audio_write);
 
 static int audio_rx_volume(struct audio_client *ac, uint32_t dev_id, int32_t volume)
 {
@@ -1555,6 +1608,33 @@ static int audio_update_acdb(uint32_t adev, uint32_t acdb_id)
     return 0;
 }
 
+#ifdef CONFIG_QSD_AUDIO_CALLREC
+static void adie_rx_path_enable(uint32_t acdb_id)
+{
+    AUDIO_INFO("%s\n", __func__);
+	if (audio_rx_path_id) {
+		adie_enable();
+		adie_set_path(adie, audio_rx_path_id, ADIE_PATH_RX);
+		adie_set_path_freq_plan(adie, ADIE_PATH_RX, 48000);
+
+		adie_proceed_to_stage(adie, ADIE_PATH_RX,
+			ADIE_STAGE_DIGITAL_READY);
+		adie_proceed_to_stage(adie, ADIE_PATH_RX,
+			ADIE_STAGE_DIGITAL_ANALOG_READY);
+	}
+}
+
+static void q6_rx_path_enable(int reconf, uint32_t acdb_id)
+{
+    AUDIO_INFO("%s\n", __func__);
+	audio_update_acdb(audio_rx_device_id, acdb_id);
+	if (!reconf)
+		qdsp6_devchg_notify(ac_control, ADSP_AUDIO_RX_DEVICE, audio_rx_device_id);
+	qdsp6_standby(ac_control);
+	qdsp6_start(ac_control);
+}
+#endif
+
 static void _audio_rx_path_enable(int reconf, uint32_t acdb_id)
 {
     AUDIO_INFO("%s\n", __func__);
@@ -1574,6 +1654,56 @@ static void _audio_rx_path_enable(int reconf, uint32_t acdb_id)
     audio_update_acdb(audio_rx_device_id, acdb_id);
 
     audio_rx_analog_enable(1);
+}
+//function to calculate mic gain; for now we use the same gain range for all mic
+static int get_audio_tx_volume(uint32_t device_id, int level)
+{
+    AUDIO_INFO("%s\n", __func__);
+    return min_mic_gain + ((max_mic_gain - min_mic_gain) * level) / MAX_MIC_LEVEL;
+}
+
+static DEFINE_MUTEX(audio_path_lock);
+static int audio_rx_path_refcount;
+static int audio_tx_path_refcount;
+
+static void _update_audio_tx_volume(struct audio_client *ac, uint32_t dev_id)
+{
+    int i, level = -1, volume, ret;
+    AUDIO_INFO("%s device_id %x\n", __func__, dev_id);
+    for (i = 0; i < DEVICE_ID_MIC_COUNT; i++ ) {
+        if (user_mic_levels[i].device_id == dev_id)
+        {
+            level = user_mic_levels[i].level;
+            break;
+        }
+    }
+    if (level==-1)
+    {
+        AUDIO_INFO("%s returning level = -1\n", __func__);
+        return;
+    }
+    volume = get_audio_tx_volume(dev_id, level);
+    ret = audio_tx_volume(ac, dev_id, volume);
+    AUDIO_INFO("%s device_id = %x, level= %d, volume= %d, ret = %d", __func__, dev_id, level, volume, ret);
+    return;
+}
+
+static void update_all_audio_tx_volume(struct audio_client *ac)
+{
+    int i, volume, ret;
+    AUDIO_INFO("%s\n", __func__);
+    for (i = 0; i < DEVICE_ID_MIC_COUNT; i++ ) {
+        if (user_mic_levels[i].level==-1)
+        {
+            continue;
+        }
+        mutex_lock(&audio_path_lock);
+        volume = get_audio_tx_volume(user_mic_levels[i].device_id, user_mic_levels[i].level);
+        ret = audio_tx_volume(ac, user_mic_levels[i].device_id, volume);
+        mutex_unlock(&audio_path_lock);
+        AUDIO_INFO("%s device_id = %x, level= %d, volume= %d, ret = %d", __func__, user_mic_levels[i].device_id, user_mic_levels[i].level, volume, ret);
+    }
+    return;
 }
 
 static void _audio_tx_path_enable(int reconf, uint32_t acdb_id)
@@ -1600,6 +1730,7 @@ static void _audio_tx_path_enable(int reconf, uint32_t acdb_id)
     qdsp6_start(ac_control);
 
     audio_tx_mute(ac_control, audio_tx_device_id, tx_mute_status);
+    _update_audio_tx_volume(ac_control, audio_tx_device_id);
 }
 
 static void _audio_rx_path_disable(void)
@@ -1826,9 +1957,6 @@ static void _audio_tx_clk_reinit(uint32_t tx_device)
         _audio_tx_clk_enable();
 }
 
-static DEFINE_MUTEX(audio_path_lock);
-static int audio_rx_path_refcount;
-static int audio_tx_path_refcount;
 
 static int audio_rx_path_enable(int en, uint32_t acdb_id)
 {
@@ -1916,6 +2044,61 @@ done:
     return res;
 }
 
+
+int q6audio_get_tx_dev_volume(int device_id)
+{
+    AUDIO_INFO("%s\n", __func__);
+    if (device_id > DEVICE_ID_MIC_COUNT || device_id < 0)
+    {
+        pr_err("unsupported device id %d\n", device_id);
+        return -EINVAL;
+    }
+    return user_mic_levels[device_id].level;
+}
+
+
+int q6audio_set_tx_dev_volume(int device_id, int level)
+{
+    AUDIO_INFO("%s\n", __func__);
+
+    if (level < -1)
+        level = -1;
+    if (level > MAX_MIC_LEVEL)
+        level = MAX_MIC_LEVEL;
+    if (device_id > DEVICE_ID_MIC_COUNT || device_id < 0)
+    {
+        AUDIO_INFO("%s unsupported device id %d\n", __func__, device_id);
+        pr_err("unsupported device id %d\n", device_id);
+        return -EINVAL;
+    }
+    user_mic_levels[device_id].level = level;
+    if (ac_control) 
+    {
+        mutex_lock(&audio_path_lock);	
+        _update_audio_tx_volume(ac_control, user_mic_levels[device_id].device_id);	
+        mutex_unlock(&audio_path_lock);
+
+    }
+
+    return 0;
+}
+
+int q6audio_set_tx_volume(int level)
+{
+    int vol;
+
+	AUDIO_INFO("%s\n", __func__);
+
+    mutex_lock(&audio_path_lock);
+    vol = q6_device_volume(audio_tx_device_id, level);
+	audio_tx_volume(ac_control, audio_tx_device_id, vol);
+	//_update_audio_tx_volume(ac_control, audio_tx_device_id);
+    mutex_unlock(&audio_path_lock);
+
+    return 0;
+}
+EXPORT_SYMBOL_GPL(q6audio_set_tx_volume);
+
 int q6audio_set_tx_mute(int mute)
 {
     uint32_t adev;
@@ -1935,9 +2118,12 @@ int q6audio_set_tx_mute(int mute)
     adev = audio_tx_device_id;
     rc = audio_tx_mute(ac_control, adev, mute);
     tx_mute_status = mute;
+    if (!mute)
+        _update_audio_tx_volume(ac_control, audio_tx_device_id);
     mutex_unlock(&audio_path_lock);
     return 0;
 }
+EXPORT_SYMBOL_GPL(q6audio_set_tx_mute);
 
 int q6audio_set_stream_volume(struct audio_client *ac, int vol)
 {
@@ -1952,6 +2138,7 @@ int q6audio_set_stream_volume(struct audio_client *ac, int vol)
     mutex_unlock(&audio_path_lock);
     return 0;
 }
+EXPORT_SYMBOL_GPL(q6audio_set_stream_volume);
 
 int q6audio_set_stream_eq(struct audio_client *ac, struct cad_audio_eq_cfg *eq_cfg)
 {
@@ -1974,7 +2161,10 @@ int q6audio_set_rx_dev_volume(int level)
     vol = q6_device_volume(audio_rx_device_id, level);
     printk("$$ DEV=%08X: vol is %d\n", audio_rx_device_id, vol);
     audio_rx_volume(ac_control, audio_rx_device_id, vol);
-
+    //this is needed beacause some audio library don't do
+    // mic mute -> mic unmute when the call is made, 
+    // instead library is constantly seting audio volume
+    _update_audio_tx_volume(ac_control, audio_tx_device_id);
     mutex_unlock(&audio_path_lock);
     return 0;
 }
@@ -2005,30 +2195,9 @@ int q6audio_set_rx_volume(int level)
 #endif
     return 0;
 }
+EXPORT_SYMBOL_GPL(q6audio_set_rx_volume);
 
-int q6audio_set_tx_dev_volume(int level)
-{
-    int vol;
-
-    AUDIO_INFO("%s\n", __func__);
-
-    mutex_lock(&audio_path_lock);
-
-    vol = q6_device_volume(audio_tx_device_id, level);
-    AUDIO_INFO("$$ DEV=%08X: vol is %d\n", audio_tx_device_id, vol);
-    audio_tx_volume(ac_control, audio_tx_device_id, vol);
-
-    mutex_unlock(&audio_path_lock);
-    return 0;
-}
-
-
-int q6audio_set_tx_volume(int level)
-{
-    return q6audio_set_tx_dev_volume(level);
-}
-
-static int q6audio_init_rx_volumes()
+static int q6audio_init_rx_volumes(void)
 {
     int vol;
     struct q6_device_info *di = q6_audio_devices;
@@ -2072,6 +2241,7 @@ int q6audio_set_rx_mute(int mute)
     mutex_unlock(&audio_path_lock);
     return 0;
 }
+EXPORT_SYMBOL_GPL(q6audio_set_rx_mute);
 
 static void do_rx_routing(uint32_t device_id, uint32_t acdb_id)
 {
@@ -2107,6 +2277,8 @@ static void do_tx_routing(uint32_t device_id, uint32_t acdb_id)
             qdsp6_standby(ac_control);
             qdsp6_start(ac_control);
         }
+        AUDIO_INFO("%s, update_tx_volume", __func__);
+        _update_audio_tx_volume(ac_control, device_id);
         return;
     }
 
@@ -2118,6 +2290,8 @@ static void do_tx_routing(uint32_t device_id, uint32_t acdb_id)
     } else {
         audio_tx_device_id = device_id;
         audio_tx_path_id = q6_device_to_path(device_id);
+        AUDIO_INFO("%s, update_tx_volume2", __func__);
+        _update_audio_tx_volume(ac_control, audio_tx_device_id);
     }
 }
 
@@ -2141,6 +2315,7 @@ int q6audio_do_routing(uint32_t device_id, uint32_t acdb_id)
     mutex_unlock(&audio_path_lock);
     return 0;
 }
+EXPORT_SYMBOL_GPL(q6audio_do_routing);
 
 int q6audio_set_route(const char *name)
 {
@@ -2206,20 +2381,36 @@ struct audio_client *q6audio_open_pcm(uint32_t bufsz, uint32_t rate,
         if (audio_rx_path_refcount == 1) 
         {
             _audio_rx_clk_enable();
+#ifdef CONFIG_QSD_AUDIO_CALLREC
+			q6_rx_path_enable(0, acdb_id);
+			adie_rx_path_enable(acdb_id);
+#else
 //            audio_update_acdb(audio_rx_device_id, acdb_id);
             qdsp6_devchg_notify(ac_control, ADSP_AUDIO_RX_DEVICE, audio_rx_device_id);
             qdsp6_standby(ac_control);
             qdsp6_start(ac_control);
             audio_update_acdb(audio_rx_device_id, acdb_id);
+#endif
         }
     } 
     else
     {
         /* TODO: consider concurrency with voice call */
-        tx_clk_freq = rate;
+#ifdef CONFIG_QSD_AUDIO_CALLREC
+		if (audio_tx_path_refcount > 0) {
+			tx_clk_freq = 8000;
+		} else {
+			tx_clk_freq = rate;
+		}
+#else
+		tx_clk_freq = rate;
+#endif
         audio_tx_path_refcount++;
         if (audio_tx_path_refcount == 1)
         {
+#ifdef CONFIG_QSD_AUDIO_CALLREC
+			tx_clk_freq = rate;
+#endif
             _audio_tx_clk_enable();
             _audio_tx_path_enable(0, acdb_id);
         }
@@ -2231,7 +2422,11 @@ struct audio_client *q6audio_open_pcm(uint32_t bufsz, uint32_t rate,
         if (ac->flags & AUDIO_FLAG_WRITE)
             rc = audio_out_open(ac, bufsz, rate, channels);
         else
-            rc = audio_in_open(ac, bufsz, rate, channels);
+#ifdef CONFIG_QSD_AUDIO_CALLREC
+			rc = audio_in_open(ac, bufsz, flags, rate, channels);
+#else
+			rc = audio_in_open(ac, bufsz, rate, channels);
+#endif
         if (rc == 0)
             break;
         if (retry == 0)
@@ -2260,6 +2455,7 @@ struct audio_client *q6audio_open_pcm(uint32_t bufsz, uint32_t rate,
     {
         if (audio_rx_path_refcount == 1) 
         {
+#ifndef CONFIG_QSD_AUDIO_CALLREC
             adie_enable();
             adie_set_path(adie, audio_rx_path_id, ADIE_PATH_RX);
             adie_set_path_freq_plan(adie, ADIE_PATH_RX, 48000);
@@ -2267,6 +2463,7 @@ struct audio_client *q6audio_open_pcm(uint32_t bufsz, uint32_t rate,
             adie_proceed_to_stage(adie, ADIE_PATH_RX, ADIE_STAGE_DIGITAL_READY);
             adie_proceed_to_stage(adie, ADIE_PATH_RX, ADIE_STAGE_DIGITAL_ANALOG_READY);
 
+#endif
             audio_rx_analog_enable(1);
         }
     }
@@ -2308,11 +2505,17 @@ struct audio_client *q6audio_open_pcm(uint32_t bufsz, uint32_t rate,
     }
 
     audio_prevent_sleep();
+    if (!(ac->flags & AUDIO_FLAG_WRITE))
+    {
+        update_all_audio_tx_volume(ac_control);		
+    }
+	
     return ac;
 #else
     return audio_test();
 #endif
 }
+EXPORT_SYMBOL_GPL(q6audio_open_pcm);
 
 int q6audio_close(struct audio_client *ac)
 {
@@ -2327,6 +2530,7 @@ int q6audio_close(struct audio_client *ac)
     audio_allow_sleep();
     return 0;
 }
+EXPORT_SYMBOL_GPL(q6audio_close);
 
 struct audio_client *q6voice_open(uint32_t flags, uint32_t acdb_id)
 {
@@ -2347,6 +2551,10 @@ struct audio_client *q6voice_open(uint32_t flags, uint32_t acdb_id)
     } else {
         tx_clk_freq = 8000;
         audio_tx_path_enable(1, acdb_id);
+        AUDIO_INFO("%s start session\n", __func__);
+        // this is a good location for updating the mic gain but 
+        // for some reason this doesn't work (too early to set mic gain)
+        //update_all_audio_tx_volume(ac_control);		
     }
 
     return ac;
@@ -2518,6 +2726,7 @@ struct audio_client *q6audio_open_qcelp(uint32_t bufsz, uint32_t rate,
     q6audio_read(ac, &ac->buf[1]);
 
     audio_prevent_sleep();
+    update_all_audio_tx_volume(ac_control);	
     return ac;
 }
 
