@@ -34,7 +34,7 @@
 
 //#define ENABLE_CLOCK_INFO   1
 
-extern struct clk msm_clocks[];
+extern struct clk msm_clocks_8x50[];
 
 static DEFINE_MUTEX(clocks_mutex);
 static DEFINE_SPINLOCK(clocks_lock);
@@ -1068,6 +1068,13 @@ static int pc_pll_request(unsigned id, unsigned on)
 	return 0;
 }
 
+long pc_clk_round_rate(unsigned id, unsigned rate)
+{
+
+	/* Not really supported; pc_clk_set_rate() does rounding on it's own. */
+	return rate;
+}
+
 /*
  * Standard clock functions defined in include/linux/clk.h
  */
@@ -1153,6 +1160,12 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 }
 EXPORT_SYMBOL(clk_set_rate);
 
+long clk_round_rate(struct clk *clk, unsigned long rate)
+{
+	return clk->ops->round_rate(clk->id, rate);
+}
+EXPORT_SYMBOL(clk_round_rate);
+
 int clk_set_parent(struct clk *clk, struct clk *parent)
 {
 	return -ENOSYS;
@@ -1180,7 +1193,7 @@ void __init msm_clock_init(void)
 
 	spin_lock_init(&clocks_lock);
 	mutex_lock(&clocks_mutex);
-	for (clk = msm_clocks; clk && clk->name; clk++) {
+	for (clk = msm_clocks_8x50; clk && clk->name; clk++) {
 		list_add_tail(&clk->list, &clocks);
 	}
 	mutex_unlock(&clocks_mutex);
@@ -1295,3 +1308,17 @@ static int __init clock_late_init(void)
 }
 
 late_initcall(clock_late_init);
+
+struct clk_ops clk_ops_pcom = {
+	.enable = pc_clk_enable,
+	.disable = pc_clk_disable,
+	.auto_off = pc_clk_disable,
+//	.reset = pc_clk_reset,
+	.set_rate = pc_clk_set_rate,
+	.set_min_rate = pc_clk_set_min_rate,
+	.set_max_rate = pc_clk_set_max_rate,
+	.set_flags = pc_clk_set_flags,
+	.get_rate = pc_clk_get_rate,
+	.is_enabled = pc_clk_is_enabled,
+	.round_rate = pc_clk_round_rate,
+};

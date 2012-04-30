@@ -46,6 +46,7 @@ Original Auther:
 /*#include "../w1/slaves/w1_ds2784.h"*/
 #include <linux/time.h>
 #include <linux/rtc.h>
+#include <linux/slab.h>
 
 struct ds2746_device_info {
 

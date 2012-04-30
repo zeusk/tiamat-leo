@@ -1192,7 +1192,7 @@ static void __init htcleo_allocate_memory_regions(void)
 
 static void __init htcleo_map_io(void)
 {
-	msm_map_common_io();
+	msm_map_qsd8x50_io();
 	htcleo_allocate_memory_regions();
 	msm_clock_init();
 
