@@ -195,3 +195,8 @@
 #endif
 #define MSM_RAM_CONSOLE_SIZE	0x00040000
 
+// For reading the real WiFi MAC address
+#define MSM_SPLHOOD_BASE     IOMEM(0xF9200000)
+#define MSM_SPLHOOD_PHYS     0x0
+#define MSM_SPLHOOD_SIZE     SZ_1M
+

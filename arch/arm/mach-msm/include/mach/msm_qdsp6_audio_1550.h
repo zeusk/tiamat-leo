@@ -20,6 +20,8 @@
 #define AUDIO_FLAG_READ		0
 #define AUDIO_FLAG_WRITE	1
 
+#include <linux/wait.h>
+
 struct audio_buffer {
 	dma_addr_t phys;
 	void *data;
@@ -51,6 +53,14 @@ struct audio_client {
 #define Q6_HW_BT_A2DP	5
 
 #define Q6_HW_COUNT	6
+
+#define DEVICE_ID_HANDSET_MIC      0
+#define DEVICE_ID_SPKR_PHONE_MIC   1
+#define DEVICE_ID_HEADSET_MIC      2
+#define DEVICE_ID_TTY_HEADSET_MIC  3
+#define DEVICE_ID_BT_SCO_MIC       4
+#define DEVICE_ID_MIC_COUNT        5
+#define MAX_MIC_LEVEL              1000
 
 struct q6_hw_info {
 	int min_gain;
@@ -89,12 +99,15 @@ int q6audio_write(struct audio_client *ac, struct audio_buffer *ab);
 int q6audio_async(struct audio_client *ac);
 
 int q6audio_do_routing(uint32_t route, uint32_t acdb_id);
+int q6audio_set_rx_mute(int mute);
 int q6audio_set_tx_mute(int mute);
 int q6audio_reinit_acdb(char* filename);
 int q6audio_update_acdb(uint32_t id_src, uint32_t id_dst);
 int q6audio_set_rx_volume(int level);
-int q6audio_set_rx_mute(int mute);
+int q6audio_set_tx_volume(int level);
 int q6audio_set_stream_volume(struct audio_client *ac, int vol);
+int q6audio_set_tx_dev_volume(int device_id, int level);
+int q6audio_get_tx_dev_volume(int device_id);
 
 struct q6audio_analog_ops {
 	void (*init)(void);

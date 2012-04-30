@@ -35,6 +35,7 @@
 #include <linux/wakelock.h>
 #include <linux/earlysuspend.h>
 #include <linux/bma150.h>
+#include <linux/slab.h>
 #include <asm/uaccess.h>
 #include <asm/mach-types.h>
 #include <asm/mach/mmc.h>
@@ -91,7 +92,7 @@ static int i2c_read_block(struct i2c_client *client, uint8_t addr,
 
 	cdata = i2c_get_clientdata(client);
 	mutex_lock(&cdata->microp_i2c_rw_mutex);
-	hr_msleep(1);
+	msleep(1);
 	for (retry = 0; retry <= I2C_READ_RETRY_TIMES; retry++) {
 		if (i2c_transfer(client->adapter, msgs, 2) == 2)
 			break;
@@ -143,7 +144,7 @@ static int i2c_write_block(struct i2c_client *client, uint8_t addr,
 // Cotulla: extra delay
 //	msleep(10);
 	mutex_lock(&cdata->microp_i2c_rw_mutex);
-	hr_msleep(1);
+	msleep(1);
 	for (retry = 0; retry <= I2C_WRITE_RETRY_TIMES; retry++) {
 		if (i2c_transfer(client->adapter, msg, 1) == 1)
 			break;

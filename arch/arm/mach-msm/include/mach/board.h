@@ -243,9 +243,11 @@ void __init msm_map_common_io(void);
 void __init msm_init_irq(void);
 void __init msm_clock_init(void);
 void __init msm_acpu_clock_init(struct msm_acpu_clock_platform_data *);
+/*
 int __init msm_add_sdcc(unsigned int controller,
 			struct msm_mmc_platform_data *plat,
 			unsigned int stat_irq, unsigned long stat_irq_flags);
+*/
 
 #if defined(CONFIG_MSM_RMT_STORAGE_SERVER)
 struct shared_ramfs_entry {

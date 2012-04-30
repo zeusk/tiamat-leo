@@ -28,11 +28,7 @@
 #include <mach/msm_rpcrouter.h>
 #include <mach/msm_iomap.h>
 #include <mach/htc_acoustic_qsd.h>
-#if defined(CONFIG_USING_BRAVOS_DSP)
-#include <mach/msm_qdsp6_audio.h>
-#else
 #include <mach/msm_qdsp6_audio_1550.h>
-#endif
 
 #include "smd_private.h"
 #include "dex_comm.h"
@@ -201,7 +197,7 @@ static long acoustic_ioctl(struct file *file, unsigned int cmd,
 	{
 		unsigned data = 0xE5;
 
-		D("ioctl: ACOUSTIC_UPDATE_ADIE called %d.\n", current->pid);
+		//D("ioctl: ACOUSTIC_UPDATE_ADIE called %d.\n", current->pid);
 
 // CotullaTODO: finish this code. if we need android tables really...
 

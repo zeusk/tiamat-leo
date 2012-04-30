@@ -5,6 +5,7 @@
 #define HTCLEO_MICROP_H
 
 #include <linux/ioctl.h>
+#include <linux/hrtimer.h>
 
 static struct wake_lock microp_i2c_wakelock;
 

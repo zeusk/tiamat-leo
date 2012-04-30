@@ -23,6 +23,7 @@
 #include <linux/debugfs.h>
 #include <linux/wakelock.h>
 #include <asm/gpio.h>
+#include <asm/io.h>
 #include <mach/msm_rpcrouter.h>
 #include <mach/board.h>
 #include <asm/mach-types.h>
