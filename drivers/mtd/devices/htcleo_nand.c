@@ -33,6 +33,7 @@
 #include <linux/io.h>
 #include <linux/moduleparam.h>
 #include <linux/stat.h>
+#include <linux/slab.h>
 
 #include <asm/dma.h>
 #include <asm/mach/flash.h>
@@ -40,9 +41,9 @@
 #include <mach/dma.h>
 
 #if defined(CONFIG_ARCH_MSM7X30)
-#define MSM_NAND_BASE 0xA0200000
+#define MSM_NAND_PHYS 0xA0200000
 #else
-#define MSM_NAND_BASE 0xA0A00000
+#define MSM_NAND_PHYS 0xA0A00000
 #endif
 
 #include "msm_nand.h"
